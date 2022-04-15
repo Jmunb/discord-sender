@@ -16,6 +16,7 @@ TOKEN = os.environ.get("DISCORD_TOKEN", "OTU3MjQ5Mzk0MDUzMzUzNTIz.Yj8FyQ.eyMLXxM
 CHANNEL_ID = os.environ.get("DISCORD_CHANNEL_ID", "912053442397212712")
 MESSAGE = os.environ.get("DISCORD_MESSAGE", "Hi, I'm Misha!")
 PROXY = os.environ.get("DISCORD_PROXY", None)
+PROXY_TYPE = os.environ.get("DISCORD_PROXY_TYPE", "socks5")
 
 # PROXY = "http://localhost:8089"
 proxies = {
@@ -28,8 +29,10 @@ def send(token, channel_id, message):
     if PROXY:
         pu = urlparse(PROXY)
         ws = create_connection("wss://gateway.discord.gg/",
-                               http_proxy_host=pu.netloc.split(':')[0],
-                               http_proxy_port=int(pu.netloc.split(':')[1]),
+                               http_proxy_host=pu.hostname,
+                               http_proxy_port=int(pu.port),
+                               proxy_type=PROXY_TYPE,
+                               http_proxy_auth=(pu.username, pu.password),
                                sslopt={"cert_reqs": ssl.CERT_NONE},
                                )
     else:
