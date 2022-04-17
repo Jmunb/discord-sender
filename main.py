@@ -15,28 +15,10 @@ urllib3.disable_warnings()
 TOKEN = os.environ.get("DISCORD_TOKEN", "OTU3MjQ5Mzk0MDUzMzUzNTIz.Yj8FyQ.eyMLXxMqVXO4J5LphLMy1rOUTlk")
 CHANNEL_ID = os.environ.get("DISCORD_CHANNEL_ID", "912053442397212712")
 MESSAGE = os.environ.get("DISCORD_MESSAGE", "Hi, I'm Misha!")
-PROXY = os.environ.get("DISCORD_PROXY", None)
-
-# PROXY = "http://localhost:8089"
-proxies = {
-    "http"  : PROXY,
-    "https" : PROXY,
-}
 
 def send(token, channel_id, message):
     ws = None
-    if PROXY:
-        pu = urlparse(PROXY)
-        print(pu.hostname, int(pu.port), pu.username, pu.password, pu.scheme)
-        ws = create_connection("wss://gateway.discord.gg/",
-                               http_proxy_host=pu.hostname,
-                               http_proxy_port=int(pu.port),
-                               http_proxy_auth=(pu.username, pu.password),
-                               sslopt={"cert_reqs": ssl.CERT_NONE},
-                               )
-    else:
-        ws = create_connection("wss://gateway.discord.gg/", sslopt={"cert_reqs": ssl.CERT_NONE})
-
+    ws = create_connection("wss://gateway.discord.gg/", sslopt={"cert_reqs": ssl.CERT_NONE})
     data = '''
     {
         "op": 2,
@@ -58,19 +40,11 @@ def send(token, channel_id, message):
 
     headers = {'authorization': token, 'Content-Type': 'application/json'}
     payload = {"content":message,"tts":False}
-    if PROXY:
-        req.post("https://discordapp.com/api/v9/channels/%s/messages" % channel_id,
-                 headers = headers,
-                 json=payload,
-                 proxies=proxies,
-                 verify=False,
-                 )
-    else:
-        req.post("https://discordapp.com/api/v9/channels/%s/messages" % channel_id,
-                 headers = headers,
-                 json=payload,
-                 verify=False,
-                 )
+    req.post("https://discordapp.com/api/v9/channels/%s/messages" % channel_id,
+             headers = headers,
+             json=payload,
+             verify=False,
+             )
 
     current_datetime = datetime.now()
     print(f"{current_datetime}  |   MSG sended to {channel_id}")
