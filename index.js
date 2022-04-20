@@ -30,7 +30,7 @@ function MakeRequestFromAllWallets (list) {
         SendMessage(item.discord_proxy, item.discord_token, wallet.osmo)
         sleep(1000)
     })
-    sleep(12 * 60 * 60 * 1000 + 6000)
+    sleep(Number(process.env.SNOOZE_TIME) * 60 * 60 * 1000 + 6000)
 
     MakeRequestFromAllWallets(list)
 }
