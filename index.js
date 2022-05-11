@@ -1,57 +1,50 @@
 require('dotenv').config()
 const { exec } = require('child_process');
-const sleep = require('system-sleep');
+const { Secp256k1HdWallet } = require('@cosmjs/launchpad')
+const { fromBech32, toBech32 } = require('@cosmjs/encoding')
 const accounts = require("./accounts.json");
 const wallets = require("./wallets.json");
-const commands = {
-    umee: [],
-    cosmos: [],
-    juno: [],
-    osmo: []
-}
+const networks = ['umee', 'cosmos', 'osmo', 'juno', 'terra']
+const commands = []
 
-wallets.slice(0, accounts.length).forEach((item, index) => {
+wallets.slice(0, accounts.length).forEach(async (item, index) => {
     const account = accounts[index]
+    const wallet = await Secp256k1HdWallet.fromMnemonic(item.mnemonic)
+    const [{ address }] = await wallet.getAccounts()
+    const rawAddress = fromBech32(address).data
+    const outWallets = []
+    networks.forEach(n => {
+        outWallets.push(toBech32(n, rawAddress))
+    })
 
-    const umeeCommand = MakeCommands(account.discord_proxy, account.discord_token, item.umee)
-    const cosmosCommand = MakeCommands(account.discord_proxy, account.discord_token, item.cosmos)
-    const junoCommand = MakeCommands(account.discord_proxy, account.discord_token, item.juno)
-    const osmoCommand = MakeCommands(account.discord_proxy, account.discord_token, item.osmo)
-
-    commands.umee.push(umeeCommand)
-    commands.cosmos.push(cosmosCommand)
-    commands.juno.push(junoCommand)
-    commands.osmo.push(osmoCommand)
+    commands.push(MakeCommand(account.discord_proxy, account.discord_token, outWallets))
 })
 
-function MakeCommands (proxy, token, wallet) {
-    return `HTTPS_PROXY=https_proxy=${proxy} docker run --net=host -e DISCORD_TOKEN='${token}' -e 'DISCORD_CHANNEL_ID'='${process.env.DISCORD_CHANNEL_ID}' -e 'DISCORD_MESSAGE'='!request ${wallet}' -i dsender`
+function MakeCommand (proxy, token, walletsList) {
+    let requests = ''
+
+    walletsList.forEach(item => {
+        requests += `!request ${item}\n`
+    })
+
+    requests = requests.slice(0, -2)
+
+    return `HTTPS_PROXY=https_proxy=${proxy} docker run --net=host -e DISCORD_TOKEN='${token}' -e 'DISCORD_CHANNEL_ID'='${process.env.DISCORD_CHANNEL_ID}' -e 'DISCORD_MESSAGE'='${requests}' -i dsender`
 }
 
-function makeRequestByNetwork (network) {
-    commands[network].forEach(command => {
+async function SendRequests () {
+    for (let command of commands) {
         console.log(`${(new Date)} ${command}`)
         exec(command, (error, stdout, stderr) => {
             console.log(error, stdout, stderr)
         })
-        sleep( 1000)
-    })
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    await new Promise(resolve => setTimeout(resolve, Number(process.env.SNOOZE_TIME) * 60 * 60 * 1000 + 60000));
+    await SendRequests()
 }
 
-function SendRequests () {
-    makeRequestByNetwork('cosmos')
-    sleep(60 * 1000)
-
-    makeRequestByNetwork('umee')
-    sleep(60 * 1000)
-
-    makeRequestByNetwork('juno')
-    sleep(60 * 1000)
-
-    makeRequestByNetwork('osmo')
-    sleep(Number(process.env.SNOOZE_TIME) * 60 * 60 * 1000 + 60000)
-
-    SendRequests()
-}
-
-SendRequests()
+setTimeout(async () => {
+    await SendRequests()
+}, 1000)
